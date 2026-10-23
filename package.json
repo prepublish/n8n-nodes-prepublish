@@ -1,0 +1,58 @@
+{
+	"name": "n8n-nodes-prepublish",
+	"version": "0.1.0",
+	"description": "n8n node for Prepublish: audit YouTube scripts before recording (hook, structure and pacing scores, the passages most likely to lose viewers, and a rewrite for each)",
+	"license": "MIT",
+	"homepage": "https://prepublish.ai",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"prepublish",
+		"youtube",
+		"script",
+		"retention",
+		"faceless",
+		"video-automation"
+	],
+	"author": {
+		"name": "Prepublish",
+		"email": "contact@prepublish.ai",
+		"url": "https://prepublish.ai"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/prepublish/n8n-nodes-prepublish.git"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/PrepublishApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/Prepublish/Prepublish.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "*",
+		"eslint": "9.32.0",
+		"prettier": "3.6.2",
+		"release-it": "^21.1.0",
+		"typescript": "5.9.2"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}

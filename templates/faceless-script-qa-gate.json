@@ -1,0 +1,393 @@
+{
+	"name": "Faceless script QA gate: audit every script with Prepublish before voiceover",
+	"nodes": [
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f01",
+			"name": "Sticky Note: How it works",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				-520,
+				-380
+			],
+			"parameters": {
+				"content": "## Faceless script QA gate\n\nEvery script your pipeline writes gets audited by **Prepublish** before it goes to voiceover.\n\n**How it works**\n1. A script comes in (here: a pinned sample in the first node).\n2. Prepublish scores the hook, structure and pacing and decides whether the script is ready to record.\n3. Ready? It goes straight to your voiceover step.\n4. Not ready? The fixes Prepublish found are turned into a rewrite brief, OpenAI rewrites the script once, and Prepublish audits the new draft.\n5. The rewritten draft goes to voiceover if it passes, or to a human if it still does not. There is exactly one rewrite pass, so the workflow can never loop.\n\n**Setup (5 minutes)**\n1. Install the community node: Settings → Community Nodes → Install → `n8n-nodes-prepublish`.\n2. Optional but recommended: open either Prepublish node, create a **Prepublish API** credential and paste an API key from prepublish.ai/dashboard (paid plans). Use the same credential on both Prepublish nodes.\n3. Open **Rewrite script with OpenAI** and select or create your OpenAI credential.\n4. Click **Execute workflow** to try it on the sample script.\n5. Replace the first node with your real trigger (schedule, webhook, Google Sheets, your script generator...). It only needs to output `video_title` and `script_text`.",
+				"width": 460,
+				"height": 700,
+				"color": 4
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f02",
+			"name": "Sticky Note: Free vs paid",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				200,
+				-380
+			],
+			"parameters": {
+				"content": "### Free vs paid\n**No credential:** works out of the box on the free tier, 3 audits a day per IP address. You get every score and verdict and the rewrite for the biggest issue; the other fixes come back `locked` (title and passage, no rewrite). This workflow uses up to 2 audits per script.\n\n**With an API key** (Creator plan, up to 50 scripts a day): every fix comes with its rewrite, so the rewrite brief OpenAI gets is much stronger.",
+				"width": 500,
+				"height": 300,
+				"color": 7
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f03",
+			"name": "Sticky Note: Voiceover",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				960,
+				-380
+			],
+			"parameters": {
+				"content": "### Plug in your voiceover step\nReplace the **Send to voiceover** nodes with your TTS or editor handoff (ElevenLabs, HTTP Request, Google Drive...).\n\n- First-pass script: `{{ $('Start: sample script').item.json.script_text }}`\n- Rewritten script: `{{ $('Rewrite script with OpenAI').item.json.output[0].content[0].text }}`\n- Report link for your team: `{{ $json.report_url }}`",
+				"width": 420,
+				"height": 300,
+				"color": 5
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f10",
+			"name": "Start: sample script",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f11",
+			"name": "Audit script with Prepublish",
+			"type": "n8n-nodes-prepublish.prepublish",
+			"typeVersion": 1,
+			"position": [
+				240,
+				0
+			],
+			"parameters": {
+				"operation": "auditScript",
+				"videoTitle": "={{ $json.video_title }}",
+				"scriptText": "={{ $json.script_text }}",
+				"waitForResult": true,
+				"timeout": 180,
+				"additionalFields": {}
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f12",
+			"name": "Ready to record?",
+			"type": "n8n-nodes-base.if",
+			"typeVersion": 2.2,
+			"position": [
+				480,
+				0
+			],
+			"parameters": {
+				"conditions": {
+					"options": {
+						"caseSensitive": true,
+						"leftValue": "",
+						"typeValidation": "strict",
+						"version": 2
+					},
+					"conditions": [
+						{
+							"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f20",
+							"leftValue": "={{ $json.ready_to_record }}",
+							"rightValue": "",
+							"operator": {
+								"type": "boolean",
+								"operation": "true",
+								"singleValue": true
+							}
+						}
+					],
+					"combinator": "and"
+				},
+				"options": {}
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f13",
+			"name": "Send to voiceover",
+			"type": "n8n-nodes-base.noOp",
+			"typeVersion": 1,
+			"position": [
+				760,
+				-140
+			],
+			"parameters": {}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f14",
+			"name": "Build rewrite brief",
+			"type": "n8n-nodes-base.set",
+			"typeVersion": 3.4,
+			"position": [
+				760,
+				140
+			],
+			"parameters": {
+				"assignments": {
+					"assignments": [
+						{
+							"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f21",
+							"name": "video_title",
+							"value": "={{ $('Start: sample script').item.json.video_title }}",
+							"type": "string"
+						},
+						{
+							"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f22",
+							"name": "original_script",
+							"value": "={{ $('Start: sample script').item.json.script_text }}",
+							"type": "string"
+						},
+						{
+							"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f23",
+							"name": "first_audit_score",
+							"value": "={{ $json.overall_score }}",
+							"type": "number"
+						},
+						{
+							"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f24",
+							"name": "first_audit_report",
+							"value": "={{ $json.report_url }}",
+							"type": "string"
+						},
+						{
+							"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f25",
+							"name": "rewrite_brief",
+							"value": "={{ 'Most important fix: ' + $json.one_key_improvement + '\\n\\n' + $json.improvements.map((fix, i) => (i + 1) + '. ' + fix.title + (fix.original_quote ? '\\n   Passage to fix: \"' + fix.original_quote + '\"' : '') + (fix.improved ? '\\n   Suggested rewrite: \"' + fix.improved + '\"' : '')).join('\\n\\n') }}",
+							"type": "string"
+						}
+					]
+				},
+				"options": {}
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f15",
+			"name": "Rewrite script with OpenAI",
+			"type": "@n8n/n8n-nodes-langchain.openAi",
+			"typeVersion": 2.1,
+			"position": [
+				1000,
+				140
+			],
+			"parameters": {
+				"resource": "text",
+				"operation": "response",
+				"modelId": {
+					"__rl": true,
+					"mode": "list",
+					"value": "gpt-5-mini"
+				},
+				"responses": {
+					"values": [
+						{
+							"type": "text",
+							"role": "system",
+							"content": "You are a YouTube script editor for a faceless channel. You revise scripts so viewers keep watching. You keep every fact, name, date and number from the original, you do not invent new facts, and you keep the narrator voice and roughly the same length. You reply with the full revised script only: no headings, no notes, no commentary."
+						},
+						{
+							"type": "text",
+							"role": "user",
+							"content": "=Revise the script for the video \"{{ $json.video_title }}\". A Prepublish audit flagged these fixes. Apply every one of them; where a suggested rewrite is given, use it or something very close to it.\n\n{{ $json.rewrite_brief }}\n\nSCRIPT:\n{{ $json.original_script }}"
+						}
+					]
+				},
+				"simplify": true,
+				"options": {}
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f16",
+			"name": "Re-audit rewritten script",
+			"type": "n8n-nodes-prepublish.prepublish",
+			"typeVersion": 1,
+			"position": [
+				1240,
+				140
+			],
+			"parameters": {
+				"operation": "auditScript",
+				"videoTitle": "={{ $('Build rewrite brief').item.json.video_title }}",
+				"scriptText": "={{ $json.output[0].content[0].text }}",
+				"waitForResult": true,
+				"timeout": 180,
+				"additionalFields": {}
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f17",
+			"name": "Ready after one rewrite?",
+			"type": "n8n-nodes-base.if",
+			"typeVersion": 2.2,
+			"position": [
+				1480,
+				140
+			],
+			"parameters": {
+				"conditions": {
+					"options": {
+						"caseSensitive": true,
+						"leftValue": "",
+						"typeValidation": "strict",
+						"version": 2
+					},
+					"conditions": [
+						{
+							"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f26",
+							"leftValue": "={{ $json.ready_to_record }}",
+							"rightValue": "",
+							"operator": {
+								"type": "boolean",
+								"operation": "true",
+								"singleValue": true
+							}
+						}
+					],
+					"combinator": "and"
+				},
+				"options": {}
+			}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f18",
+			"name": "Send rewritten script to voiceover",
+			"type": "n8n-nodes-base.noOp",
+			"typeVersion": 1,
+			"position": [
+				1760,
+				40
+			],
+			"parameters": {}
+		},
+		{
+			"id": "5f0c2a7e-7d1b-4c43-9a0e-2b1d3c4e5f19",
+			"name": "Needs human review",
+			"type": "n8n-nodes-base.noOp",
+			"typeVersion": 1,
+			"position": [
+				1760,
+				240
+			],
+			"parameters": {}
+		}
+	],
+	"connections": {
+		"Start: sample script": {
+			"main": [
+				[
+					{
+						"node": "Audit script with Prepublish",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Audit script with Prepublish": {
+			"main": [
+				[
+					{
+						"node": "Ready to record?",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Ready to record?": {
+			"main": [
+				[
+					{
+						"node": "Send to voiceover",
+						"type": "main",
+						"index": 0
+					}
+				],
+				[
+					{
+						"node": "Build rewrite brief",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Build rewrite brief": {
+			"main": [
+				[
+					{
+						"node": "Rewrite script with OpenAI",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Rewrite script with OpenAI": {
+			"main": [
+				[
+					{
+						"node": "Re-audit rewritten script",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Re-audit rewritten script": {
+			"main": [
+				[
+					{
+						"node": "Ready after one rewrite?",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Ready after one rewrite?": {
+			"main": [
+				[
+					{
+						"node": "Send rewritten script to voiceover",
+						"type": "main",
+						"index": 0
+					}
+				],
+				[
+					{
+						"node": "Needs human review",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {
+		"Start: sample script": [
+			{
+				"json": {
+					"video_title": "The Book Nobody Can Read: The Voynich Manuscript",
+					"script_text": "In 1912, a book dealer named Wilfrid Voynich bought a box of old manuscripts from a Jesuit college outside Rome. One of them was a small vellum book, about 240 pages long, filled with drawings of plants that do not exist, diagrams of stars, and pages of naked women bathing in strange green pools. Every page was covered in a neat, flowing script. Nobody could read a single word of it.\n\nMore than a century later, nobody still can. Codebreakers who cracked Japanese and German ciphers in the Second World War tried and failed. Linguists have tried. Computer scientists have thrown machine learning at it. Every few years someone announces they have solved it, and every time the solution falls apart within weeks.\n\nHere is what we do know. Radiocarbon dating in 2009 placed the vellum in the early fifteenth century, somewhere between 1404 and 1438. The text is not random. Word frequencies follow the same statistical patterns as real human languages. Some words repeat two or three times in a row, which almost no natural language does.\n\nSo there are really only three possibilities. It is a lost language, written in an alphabet that was invented just for this book. It is a cipher so clever that it has beaten every method we have. Or it is a brilliant medieval hoax, made to fool a wealthy buyer.\n\nIn this video we are going to look at the evidence for each one, and at the one clue most people skip."
+				}
+			}
+		]
+	},
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"meta": {
+		"templateCredsSetupCompleted": false
+	},
+	"tags": []
+}
